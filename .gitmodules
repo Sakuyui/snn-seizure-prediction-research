@@ -2,6 +2,10 @@
 	path = data
 	url = git@github.com:Sakuyui/snn-seizure-detection-data.git
 
-[submodule "snn_lib"]
-	path = snn_libs/snn_lib
+[submodule "snn_libs"]
+	path = snn_libs
 	url = git@github.com:Sakuyui/snn-simulator-pure-python.git
+
+[submodule "microstates"]
+	path = microstates
+	url = git@github.com:Sakuyui/eeg_latent_space.git
