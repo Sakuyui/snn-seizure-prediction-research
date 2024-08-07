@@ -6,6 +6,6 @@
 	path = snn_libs
 	url = git@github.com:Sakuyui/snn-simulator-pure-python.git
 
-[submodule "microstates"]
-	path = microstates
+[submodule "microstate_lib"]
+	path = microstate_lib
 	url = git@github.com:Sakuyui/eeg_latent_space.git
