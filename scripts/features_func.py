@@ -23,9 +23,7 @@ def network_entropy(win, time_step_lag=15):
     np.fill_diagonal(mutual_information_2d, 0)
     s = np.repeat(np.sum(mutual_information_2d, axis = 0), win.shape[1] - 1)
     return flatten_remove_diag(mutual_information_2d) / s
-    
+
 def mutual_information(win, time_step_lag=15):
     mutual_information = flatten_remove_diag(-0.5 * (1 - (np.corrcoef(win.T, np.roll(win.T, -time_step_lag)))**2))
     return mutual_information
-
-
