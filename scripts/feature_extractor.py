@@ -50,21 +50,25 @@ class FeatureRecorder():
     
 class RecordConfiguration():
     def __init__(self) -> None:
-        self.record_objectives = {
+        self.record_objects = {
         }
-    def add_record_object(self, name, func, dependencies = [], temporary = False):
-        self.record_objectives[name] = {'enabled': True, 'func': func, 'dependencies': [], 'temporary': temporary}
-
+        
+    def add_record_object(self, name, func, dependencies = [], temporary = False, inject_padding = None, inject_arguments = {}, apply_per_channel=False):
+        
+        self.record_objects[name] = {'enabled': True, 
+                                            'func': lambda win, **dep_kwargs: func(**({'win': win} | inject_arguments | dep_kwargs)), 
+                                            'dependencies': [], 'temporary': temporary, 'apply_per_channel':apply_per_channel}
+    
     def enable_record_item(self, name):
-        if name not in self.record_objectives:
+        if name not in self.record_objects:
             return
-        self.record_objectives[name]['enabled'] = True
+        self.record_objects[name]['enabled'] = True
         
     def __iter__(self):
-        return self.record_objectives.__iter__()
+        return self.record_objects.__iter__()
     
     def __getitem__(self, key):
-        return self.record_objectives[key]
+        return self.record_objects[key]
         
 class FeatureExtractor():
     def __init__(self, freq, decision_time_delay):
