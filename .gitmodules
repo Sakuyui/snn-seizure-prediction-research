@@ -8,4 +8,9 @@
 
 [submodule "microstate_lib"]
 	path = microstate_lib
-	url = https://github.com/Sakuyui/eeg_latent_space.git
+	url = git@github.com:Sakuyui/eeg_latent_space.git
+
+[submodule "eeg_lang"]
+	path = eeg_lang
+	url = git@github.com:Sakuyui/eeg-lang-nature.git
+

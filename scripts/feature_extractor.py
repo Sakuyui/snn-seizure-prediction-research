@@ -17,6 +17,7 @@ class FeatureRecorder():
             self.clear_all()
         elif not remain_content:
             self.clear_all_content()
+
         self.logs.append([self.length, -1])
 
     def end_recording(self):
@@ -52,6 +53,7 @@ class RecordConfiguration():
     def __init__(self) -> None:
         self.record_objects = {
         }
+
         
     def add_record_object(self, name, func, dependencies = [], temporary = False, inject_padding = None, inject_arguments = {}, apply_per_channel=False):
         
@@ -70,6 +72,7 @@ class RecordConfiguration():
     def __getitem__(self, key):
         return self.record_objects[key]
         
+
 class FeatureExtractor():
     def __init__(self, freq, decision_time_delay):
         self.freq = freq
@@ -120,13 +123,11 @@ class FeatureExtractor():
             for t in range(0, T):
                 yield signal[max(0, t - time_delay): t + 1, :]
         
-        self._reset_recorder(feature_recorder, append_record_mode)
+        feature_recorder.begin_recording(recorder)
 
-        for window in window_views(signal, int(self.freq * self.decision_time_delay)):
-            if append_record_mode:
-                feature_recorder.append_record(window)
-            else:
-                feature_recorder.record_at_t(window, current_time)
+        for window in window_views(signal, self.freq * self.decision_time_delay):
+            feature_recorder.record_at_t(current_time, window)
+
             current_time += 1
             if time_limit >= 0 and current_time >= time_limit:
                 break
