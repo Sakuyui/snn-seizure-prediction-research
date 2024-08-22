@@ -10,9 +10,9 @@ class FeatureRecorder():
     
     def begin_recording(self, recorder_config,  remain_content=True, remain_record_objective=True):
         if not remain_record_objective:
-            feature_recorder.clear_all()
+            self.clear_all()
         elif not remain_content:
-            feature_recorder.clear_all_content()
+            self.clear_all_content()
         
         self.logs.append([self.length, -1])
     
@@ -33,9 +33,6 @@ class RecordConfiguration():
         }
     def add_record_object(self, name, func):
         self.record_objectives[name] = func
-        
-    
-    
 
 class FeatureExtractor():
     def __init__(self, freq, decision_time_delay):
@@ -61,8 +58,7 @@ class FeatureExtractor():
                 yield signal[max(0, t - time_delay): t, :]
         
         feature_recorder.begin_recording(recorder)
-            
-            
+
         for window in window_views(signal, self.freq * self.decision_time_delay):
             feature_recorder.record_at_t(current_time, window)
             current_time += 1
