@@ -1,35 +1,48 @@
-from functools import cache
+from rp_segmentation_module import InfinitePhaseSpaceReonstructionBasedSegmentGenerator, FiniteTimeDelaySegmentGenerator, FiniteTimeDelayEEGSegmentGenerator
+
+import pyprep
 import numpy as np
-class BaseSegmentGenerator(object):
-    pass
+import mne
+import os, sys
+from datetime import datetime
+import argparse
 
-class InfinitePhaseSpaceReonstructionBasedSegmentGenerator(BaseSegmentGenerator):
-    def __init__(self, arg_lambda = 0.5, truncation = -1):
-        self.arg_lambda = arg_lambda
-        self.truncation = truncation
-        
-    def _observation_differs(self, D, t_i, t_j):
-        return np.abs(D[t_i] - D[t_j])
-    
-    
-    def _distance(self, D, t_i, t_j, dept = 0):
-        _observation_differs = self._observation_differs(D, t_i, t_j)
-        recursive_distance = 0 \
-            if t_i == 0 or t_j == 0 or (self.truncation > 0 and dept >= self.truncation) \
-            else self.arg_lambda * self._distance(t_i - 1, t_j - 1)
-        distance = _observation_differs + recursive_distance
-        return distance
+parser = argparse.ArgumentParser()
+parser.add_argument("-m", "--use_microstate", type=bool, default=True)
+parser.add_argument("-d", "--delay", type=int, default=3)
+parser.add_argument("-s", "--states", type=int, default=4)
+parser.add_argument("-p", "--save-path", type=str, default="./sentences.npy")
 
-    @cache
-    def distance(self, D, t_i, t_j):
-        return self._distance(D, t_i, t_j, 0)
-    
-    def calculate_recurrent_plot_points(self, D, epsilon = 0.01):
-        length = D.shape[0]
-        
-        recurrent_plot_points = []
-        for i in range(length):
-            for j in range(length):
-                if self.distance(D, i, j) < epsilon:
-                    recurrent_plot_points.append((i, j))
-                    
+args = parser.parse_args()
+
+sys.path.append("../data/dataset")
+sys.path.append("..//microstate_lib/code")
+
+from dataset import *
+
+dataset_base_path = "../data"
+dataset_facade = EEGDatasetFacade(dataset_base_path=dataset_base_path)
+dataset = dataset_facade("epileptic_eeg_dataset")
+
+def to_segment_sequence(microstate_sequence):
+    pre_state = -1
+    segment_sequence = []
+    for i in range(len(microstate_sequence)):
+        state = microstate_sequence[i]
+        if pre_state < 0:
+            pre_state = state
+        elif microstate_sequence[i] != pre_state:
+            segment_sequence.append(pre_state)
+            pre_state = state
+    return np.array(segment_sequence)
+
+if args.use_microstate:
+    data = np.load("../data/sEEG/epileptic_eeg_dataset/[seg-[prep-asr]]person_10_states4_gev_0.8419650374810485.npy")
+    data = to_segment_sequence(data)
+else:
+    data = dataset.get_merge_numpy_data([[10, 1], [10, 2]]).T
+
+
+segment_generator = FiniteTimeDelaySegmentGenerator(data=data, time_delay=args.delay, n_states=args.states)
+segments = segment_generator.calculate_recurrent_plot_points()
+np.save(args.save_path + "", segments)

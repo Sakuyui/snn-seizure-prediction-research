@@ -5,8 +5,6 @@ sys.path.append(".")
 from feature_extractor import RecordConfiguration
 from features_func import *
 
-
-
 def RecorderBuilder():
     
     def __init__(self):
