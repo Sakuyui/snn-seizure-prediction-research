@@ -43,11 +43,18 @@ class FeatureRecorder():
             if not item['enabled']:
                 val = None
             else:
+                extend_args = {}
                 func = item['func']
                 if item['apply_per_channel']:
-                    val = [func(window[:, channel_id], **{item['inject_arguments']}) for channel_id in range(window.shape[1])]
+                    if len(extend_args) == 0:
+                        val = [func(window[:, channel_id] ) for channel_id in range(window.shape[1])]
+                    else:
+                        val = [func(window[:, channel_id], **extend_args) for channel_id in range(window.shape[1])]
                 else:
-                    val = func(window, **{item['inject_arguments']})
+                    if len(extend_args) == 0:
+                        val = func(window, extend_args)
+                    else:
+                        val = func(window, extend_args)
             if item['temporary']:
                 _record_temporary()
             else:
@@ -73,7 +80,7 @@ class RecordConfiguration():
         
     def add_record_object(self, name, func, dependencies = [], temporary = False, inject_padding = None, inject_arguments = {}, apply_per_channel=False, inject_recorder=False):
         self.record_objects[name] = {'enabled': True, 
-                                            'func': lambda win, **ext_kwargs: func(**({'win': win} | inject_arguments | ext_kwargs)), 
+                                            'func': lambda win, ext_kwargs: func(**({'win': win} | inject_arguments | ext_kwargs)), 
                                             'dependencies': dependencies, 'temporary': temporary, 'apply_per_channel':apply_per_channel, "inject_padding":inject_padding,
                                             'inject_recorder': inject_recorder}
 
@@ -139,7 +146,7 @@ class FeatureExtractor():
         feature_recorder.begin_recording()
 
         for window in window_views(signal, self.freq * self.decision_time_delay):
-            feature_recorder.record_at_t(current_time, window)
+            feature_recorder.record_at_t(window, current_time)
 
             current_time += 1
             if time_limit >= 0 and current_time >= time_limit:

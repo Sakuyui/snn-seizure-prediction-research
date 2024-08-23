@@ -133,7 +133,6 @@ def vg_u_graph_index_complexity(win, gic_window_size, recorder):
     gic_records = recorder['vg_graph_index_complexity'][:-gic_window_size]
     return np.mean(gic_records) + 3.1 * np.std(gic_records)
 
-def vg_u_graph_index_complexity
 def vg_jaccard_similarity_coefficient(win, visibility_graph):
     def _vg_jaccard_similarity_coefficient():
         n = visibility_graph.shape[0]
