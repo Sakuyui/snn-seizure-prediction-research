@@ -31,7 +31,10 @@ def RecorderBuilder():
         config.add_record_object("vg_degree_distribution", vg_degree_distribution, dependencies=['vg_degree'], apply_per_channel=True)
         config.add_record_object("vg_degree_entropy", vg_degree_entropy, dependencies=['vg_degree_distribution'], apply_per_channel=True)
         config.add_record_object("vg_degree_centralitie", vg_degree_centrality, dependencies=['vg_degree'], apply_per_channel=True)
-        config.add_record_object("vg_graph_index_complexity", vg_graph_index_complexities, dependencies=['visibility_graph'], apply_per_channel=True)
+        config.add_record_object("vg_graph_index_complexity", vg_graph_index_complexity, dependencies=['visibility_graph'], apply_per_channel=True)
+        config.add_record_object("vg_u=graph_index_complexity", vg_u_graph_index_complexity, dependencies=['vg_graph_index_complexity'],
+                                 apply_per_channel=True, inject_recorder=True)
+
         config.add_record_object("vg_jaccard_similarity_coefficient", vg_jaccard_similarity_coefficient,
                                  dependencies=['visibility_graph'], apply_per_channel=True)
         config.add_record_object("vg_density", vg_density,

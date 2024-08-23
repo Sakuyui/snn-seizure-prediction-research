@@ -9,6 +9,7 @@ class FeatureRecorder():
         self.records = {}
         self.length = 0
         self.config = recorder_config
+        self.temporary_variables = {}
         for config_item in recorder_config:
             self.records[config_item] = []
 
@@ -24,17 +25,28 @@ class FeatureRecorder():
             
     def record_at_t(self, window, time = -1):
         record_name = 0
+        def _record():
+            if time < 0 or time >= self.length:
+                self.records[record_name].append(val)
+            else:
+                self.records[record_name][time] = val
+        def _record_temporary():
+            self.temporary_variables[record_name] = val
+            
         for record_name in self.records:
             item = self.config[record_name]
             if not item['enabled']:
                 val = None
             else:
                 func = item['func']
-                val = func(window)
-            if time < 0 or time >= self.length:
-                self.records[record_name].append(val)
+                if item['apply_per_channel']:
+                    val = [func(window[:, channel_id], **{item['inject_arguments']}) for channel_id in range(window.shape[1])]
+                else:
+                    val = func(window, **{item['inject_arguments']})
+            if item['temporary']:
+                _record_temporary()
             else:
-                self.records[record_name][time] = val
+                _record()
         self.length += 1
             
     def append_record(self, window = -1):
@@ -53,11 +65,11 @@ class RecordConfiguration():
         self.record_objects = {
         }
         
-    def add_record_object(self, name, func, dependencies = [], temporary = False, inject_padding = None, inject_arguments = {}, apply_per_channel=False):
-        
+    def add_record_object(self, name, func, dependencies = [], temporary = False, inject_padding = None, inject_arguments = {}, apply_per_channel=False, inject_recorder=False):
         self.record_objects[name] = {'enabled': True, 
-                                            'func': lambda win, **dep_kwargs: func(**({'win': win} | inject_arguments | dep_kwargs)), 
-                                            'dependencies': [], 'temporary': temporary, 'apply_per_channel':apply_per_channel}
+                                            'func': lambda win, **ext_kwargs: func(**({'win': win} | inject_arguments | ext_kwargs)), 
+                                            'dependencies': dependencies, 'temporary': temporary, 'apply_per_channel':apply_per_channel, "inject_padding":inject_padding,
+                                            'inject_recorder': inject_recorder}
     
     def enable_record_item(self, name):
         if name not in self.record_objects:
@@ -81,30 +93,26 @@ class FeatureExtractor():
         self.initialized = True
         
     def _calculate_recording_path(self, recorder_configuration):
+        key_list = list(recorder_configuration)
+        configuration_id_map = {key:index for index, key in enumerate(key_list)}
+        n = len(configuration_id_map)
+        dependency_graph = np.zeros((n, n))
+        for i in range(n):
+            dependencies = recorder_configuration[key_list[i]]['dependencies']
+            for dep in dependencies:
+                dependency_graph[configuration_id_map[dep], i] = 1
         path = []
-        white = list(recorder_configuration)
-        grey = []
-        
-        while white or len(grey) > 0:
-            if len(grey) == 0:
-                key = white.pop()
-                grey.append(key)
-            else:
-                dependencies = recorder_configuration[grey[-1]]['dependencies']
-                all_black = True
-                for dep in dependencies:
-                    if dep in grey:
-                        all_black = False
+        while len(path) < n:
+            processed = False
+            for i in range(n):
+                if all(x == 0 for x in dependency_graph[:, i]):
+                    if all(x == 0 for x in dependency_graph[i, :]):
                         continue
-                    if dep in path:
-                        continue
-                    
-                    grey.append(dep)
-                    white.remove(dep)
-                    
-                if all_black:
-                    key_record_item_can_be_processed = grey.pop()
-                    path.append(key_record_item_can_be_processed)
+                    dependency_graph[i, :][dependency_graph[i, :] == 1] = 0
+                    processed = True
+                    path.append(key_list[i])
+            if not processed:
+                raise ArithmeticError
         self.path = path
 
     def _reset_recorder(self, feature_recorder, append_record_mode=True):
