@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import os, sys
 
-
 class FeatureRecorder():
     def __init__(self, recorder_config) -> None:
         self.logs = []
@@ -11,6 +10,7 @@ class FeatureRecorder():
         self.config = recorder_config
         for config_item in recorder_config:
             self.records[config_item] = []
+        self.temporary_variables = {}
 
     def begin_recording(self,  remain_content=True, remain_record_objective=True):
         if not remain_record_objective:
@@ -24,6 +24,10 @@ class FeatureRecorder():
         self.logs[-1][1] = self.length - 1
             
     def record_at_t(self, window, time = -1):
+        #   self.record_objects[name] = {'enabled': True, 
+        #                                     'func': lambda win, **dep_kwargs: func(**({'win': win} | inject_arguments | dep_kwargs)), 
+        #                                     'dependencies': [], 'temporary': temporary, 'apply_per_channel':apply_per_channel}
+    
         record_name = 0
         for record_name in self.records:
             item = self.config[record_name]
@@ -31,11 +35,16 @@ class FeatureRecorder():
                 val = None
             else:
                 func = item['func']
+                extend_args = {}
+                if item['']
                 val = func(window)
-            if time < 0 or time >= self.length:
-                self.records[record_name].append(val)
+            if item['temporary']:
+                self.temporary_variables[record_name] = val
             else:
-                self.records[record_name][time] = val
+                if time < 0 or time >= self.length:
+                    self.records[record_name].append(val)
+                else:
+                    self.records[record_name][time] = val
         self.length += 1
             
     def append_record(self, window = -1):
@@ -58,7 +67,7 @@ class RecordConfiguration():
     def add_record_object(self, name, func, dependencies = [], temporary = False, inject_padding = None, inject_arguments = {}, apply_per_channel=False):
         
         self.record_objects[name] = {'enabled': True, 
-                                            'func': lambda win, **dep_kwargs: func(**({'win': win} | inject_arguments | dep_kwargs)), 
+                                            'func': lambda win, **extend_args: func(**({'win': win} | inject_arguments | extend_args)), 
                                             'dependencies': [], 'temporary': temporary, 'apply_per_channel':apply_per_channel}
     
     def enable_record_item(self, name):
@@ -116,14 +125,14 @@ class FeatureExtractor():
         else:
             feature_recorder.begin_recording(False, True)
             
-    def do_extraction(self, signal, feature_recorder, append_record_mode = True, time_limit = -1):
+    def do_extraction(self, signal, feature_recorder, time_limit = -1):
         current_time = 0
         def window_views(signal, time_delay):
             T = signal.shape[0]
             for t in range(0, T):
                 yield signal[max(0, t - time_delay): t + 1, :]
         
-        feature_recorder.begin_recording(recorder)
+        feature_recorder.begin_recording()
 
         for window in window_views(signal, self.freq * self.decision_time_delay):
             feature_recorder.record_at_t(current_time, window)

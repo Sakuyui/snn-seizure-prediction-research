@@ -354,3 +354,5 @@ def katz_fractal_dimensions(win):
 
 def electrode_sd(win):
     return np.std(win, axis = 0)
+
+
