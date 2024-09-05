@@ -121,7 +121,7 @@ def vg_degree_centrality(win, vg_degree):
         return direct_links / ((n - 1) * (n - 2)) 
     return _vg_degree_centrality()
             
-def vg_graph_index_complexities(win, visibility_graph):
+def vg_graph_index_complexity(win, visibility_graph):
     def _vg_graph_index_complexity():
         n = visibility_graph.shape[0]
         eigenvalues, _ = np.linalg.eig(visibility_graph)
@@ -129,6 +129,9 @@ def vg_graph_index_complexities(win, visibility_graph):
         c = (lambda_max - 2 * np.cos(np.pi / (n - 1))) / (n - 1 - 2 * np.cos(np.pi / (n + 1)))
         return 4 * c * (1 - c)
     return _vg_graph_index_complexity()
+def vg_u_graph_index_complexity(win, gic_window_size, recorder):
+    gic_records = recorder['vg_graph_index_complexity'][:-gic_window_size]
+    return np.mean(gic_records) + 3.1 * np.std(gic_records)
 
 def vg_jaccard_similarity_coefficient(win, visibility_graph):
     def _vg_jaccard_similarity_coefficient():
