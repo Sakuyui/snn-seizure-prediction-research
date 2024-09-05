@@ -30,16 +30,18 @@ class FiniteTimeDelayEEGSegmentGenerator(BaseSegmentGenerator):
                 dist = self.distance(i, j)
                 if dist < epsilon:
                     print(f'dist={dist} at coordination {i}, {j}')
-                    recurrent_plot_points.append((i, j))
+                    if j - i >= 3:
+                        recurrent_plot_points.append((i, j))
                     break
         return np.array(recurrent_plot_points)
 
                 
 class FiniteTimeDelaySegmentGenerator(BaseSegmentGenerator):
-    def __init__(self, data, n_states, time_delay = 15):
+    def __init__(self, data, n_states, time_delay = 15, cut=[2, 800]):
         self.data = data
         self.time_delay = time_delay
         self.n_states = n_states
+        self.cut = cut
         
     def _time_delay_vector(self, t, time_delay):
         vec = self.data[max(t - time_delay + 1, 0): t + 1]
@@ -53,16 +55,34 @@ class FiniteTimeDelaySegmentGenerator(BaseSegmentGenerator):
 
         return np.sqrt(np.sum((time_delay_vector1 - time_delay_vector2) ** 2))
     
-    def calculate_recurrent_plot_points(self, epsilon = 0.1):
+    def calculate_recurrent_segments(self, epsilon = 0.1):
         length = self.data.shape[0]
         
-        recurrent_plot_points = []
+        recurrent_segments = []
+        cut_lower = self.cut[0]
+        cut_upper = self.cut[1] + 1
         for i in tqdm(range(self.time_delay, length)):
             for j in range(i + 1, length):
                 dist = self.distance(i, j)
                 if dist < epsilon:
-                    print(f'dist={dist} at coordination {i}, {j}')
-                    recurrent_plot_points.append((i, j))
+                    if j - i > self.cut[0] and j - i <= cut_upper:
+                        recurrent_segments.append(self.data[max(i - self.time_delay + 1, 0): j + 1])
+                    break
+        return recurrent_segments
+    
+    def calculate_recurrent_plot_points(self, epsilon = 0.1):
+        length = self.data.shape[0]
+        
+        recurrent_plot_points = []
+        cut_lower = self.cut[0]
+        cut_upper = self.cut[1] + 1
+        for i in tqdm(range(self.time_delay, length)):
+            for j in range(i + 1, length):
+                dist = self.distance(i, j)
+                if dist < epsilon:
+                    if j - i > self.cut[0] and j - i <= cut_upper:
+                        print(f'dist={dist} at coordination {i}, {j}')
+                        recurrent_plot_points.append((i, j))
                     break
         return np.array(recurrent_plot_points)
 
