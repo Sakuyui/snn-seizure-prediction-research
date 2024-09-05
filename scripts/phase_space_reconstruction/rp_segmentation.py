@@ -41,40 +41,18 @@ def split_data_into_normal_and_seizures(data, record_ids):
         previous_position = seizure_annotation[1] + 1
     return splitted_data
 
-def to_segment_sequence(microstate_sequence):
-    pre_state = -1
-    segment_sequence = []
-    for i in range(len(microstate_sequence)):
-        state = microstate_sequence[i]
-        if pre_state < 0:
-            pre_state = state
-        elif microstate_sequence[i] != pre_state:
-            segment_sequence.append(pre_state)
-            pre_state = state
-    return np.array(segment_sequence)
+
 
 corpus_storage_base_path = dict_args['corpus_storage_base_path']
 microstate_storage_base_path = dict_args['microstate_storage_base_path']
-
+if not os.path.exists(corpus_storage_base_path):
+        os.makedirs(corpus_storage_base_path, exist_ok=True)
+        
 if args.use_microstate:
     sids = dict_args['sids']     
-
-
+    
     for index, sid in enumerate(sids):
-        load = False
-        microstate_sequence_filename_pattern = dict_args['microstate_filename_form'].replace("#{sid}", str(sid))
-        for file_name in os.listdir(microstate_storage_base_path):
-            if not os.path.exists(corpus_storage_base_path):
-                os.makedirs(corpus_storage_base_path, exist_ok=True)
-            match = re.match(microstate_sequence_filename_pattern, file_name)
-            if match is not None:
-                print(f"Processing file {file_name}")
-                data = np.load(os.path.join(microstate_storage_base_path, file_name))
-                data = to_segment_sequence(data)
-                load = True
-        if not load:
-            raise FileNotFoundError(f"File for study_id = {sid} not found.")
-
+        data = dataset.get_eeg_microstate_sequence(sid, dict_args['microstate_filename_form'], reduce_to_segments = True)
         data = split_data_into_normal_and_seizures(data, args['merged_record_ids'][index])
 
         delay = dict_args['delay']
@@ -85,7 +63,7 @@ if args.use_microstate:
                 segments = segment_generator.calculate_recurrent_plot_points()
             else:
                 segments = segment_generator.calculate_recurrent_segments()
-            np.save(os.path.join(corpus_storage_base_path, f'{sid}_d{delay}_s{n_states}.npy'), np.array(segments, dtype='object'), allow_pickle=True, )
+            np.save(os.path.join(corpus_storage_base_path, f'{sid}_d{delay}_s{n_states}.npy'), np.array(segments, dtype='object'), allow_pickle=True)
         else:
             for seizure_data_index, seizure_data in enumerate(data['seizures']):
                 segment_generator = FiniteTimeDelaySegmentGenerator(data=seizure_data, time_delay=delay, n_states=n_states, cut=dict_args['cut'])
@@ -93,14 +71,13 @@ if args.use_microstate:
                     segments = segment_generator.calculate_recurrent_plot_points()
                 else:
                     segments = segment_generator.calculate_recurrent_segments()
-                np.save(os.path.join(corpus_storage_base_path, f'seizure_{seizure_data_index}_{sid}_d{delay}_s{n_states}.npy'), np.array(segments, dtype='object'), allow_pickle=True, )
+                np.save(os.path.join(corpus_storage_base_path, f'seizure_{seizure_data_index}_{sid}_d{delay}_s{n_states}.npy'), np.array(segments, dtype='object'), allow_pickle=True)
             for normal_data_index, seizure_data in enumerate(data['normal']):
                 segment_generator = FiniteTimeDelaySegmentGenerator(data=seizure_data, time_delay=delay, n_states=n_states, cut=dict_args['cut'])
                 if args.index_only:
                     segments = segment_generator.calculate_recurrent_plot_points()
                 else:
                     segments = segment_generator.calculate_recurrent_segments()
-                np.save(os.path.join(corpus_storage_base_path, f'normal_{seizure_data_index}_{sid}_d{delay}_s{n_states}.npy'), np.array(segments, dtype='object'), allow_pickle=True, )
-            
+                np.save(os.path.join(corpus_storage_base_path, f'normal_{seizure_data_index}_{sid}_d{delay}_s{n_states}.npy'), np.array(segments, dtype='object'), allow_pickle=True)
 else:
     raise NotImplementedError
