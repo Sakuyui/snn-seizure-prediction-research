@@ -22,6 +22,8 @@ class BackTrackingHelper():
         raise NotImplementedError
     def local_id_non_terminate(self, non_terminate):
         raise NotImplementedError
+    def to_global_grammar_id(self, global_symbol_id_begin, global_symbol_id_right_1, global_symbol_id_right_2):
+        raise NotImplementedError
     
     def __back_track(self, parse, grammar, i, j, context, 
                      start_processing_strategy: Callable,
@@ -41,22 +43,24 @@ class BackTrackingHelper():
             if self.is_terminate(associate_symbol_id) or self.is_non_terminate(associate_symbol_id):
                 child_context = CKYBacktrackingContext()
                 terminate_processing_strategy(child_context, cell, associate_symbol_id)
-
+                
             elif self.is_preterminate(associate_symbol_id):
                 local_id = self.local_id_pre_terminate(associate_symbol_id)
                 most_possible_terminate_id = np.argmax(grammar['non_terminate'][local_id])
                 child_context = self.__back_track(parse, grammar, i, j, CKYBacktrackingContext(), start_processing_strategy, pre_terminate_processing_strategy,
                                   terminate_processing_strategy, non_termination_processing_strategy, self.global_id_terminate(most_possible_terminate_id), keep_cnt)
-                pre_terminate_processing_strategy(context, cell, child_context)
+                gid = self.to_global_grammar_id(associate_symbol_id, most_possible_nonterminate_id)
+                pre_terminate_processing_strategy(context, cell, child_context, gid)
             elif self.is_start(associate_symbol_id):
                 start_processing_strategy(context, cell)
                 most_possible_nonterminate_id = np.argmax(grammar['start'])
+                gid = self.to_global_grammar_id(associate_symbol_id, most_possible_nonterminate_id)
                 child_context = self.__back_track(parse, grammar, i, j, CKYBacktrackingContext(), start_processing_strategy, pre_terminate_processing_strategy,
                                   terminate_processing_strategy, non_termination_processing_strategy, self.global_id_non_terminate(most_possible_nonterminate_id), keep_cnt)
-                start_processing_strategy(context, cell, child_context)
+                start_processing_strategy(context, cell, child_context, gid)
             else:
                 raise ValueError
-            return context_merging_strategy(context, child_context)
+            return context_merging_strategy(context, child_context, None, gid)
 
         if i < j:
             if self.is_terminate(associate_symbol_id) or self.is_preterminate(associate_symbol_id):
@@ -66,6 +70,7 @@ class BackTrackingHelper():
                 local_id = self.local_id_non_terminate(associate_symbol_id)
                 rules = grammar['non_terminate'][local_id]
                 most_possible_nonterminate_ids = np.unravel_index(rules.argmax(), rules.shape)
+
                 best_k = i
                 best_p = -np.inf
                 for k in range(i + 1, j):
@@ -86,15 +91,17 @@ class BackTrackingHelper():
                         start_processing_strategy, pre_terminate_processing_strategy,
                         terminate_processing_strategy, non_termination_processing_strategy, 
                     self.global_id_non_terminate(most_possible_nonterminate_ids[1]), keep_cnt)
-                non_termination_processing_strategy(context, cell, context_children_1, context_children_2)
-                return context_merging_strategy(context, context_children_1, context_children_2)
+                gid = self.to_global_grammar_id(associate_symbol_id, most_possible_nonterminate_ids[0], most_possible_nonterminate_ids[1])
+                non_termination_processing_strategy(context, cell, context_children_1, context_children_2, gid)
+                return context_merging_strategy(context, context_children_1, context_children_2, gid)
             elif self.is_start(associate_symbol_id):
                 most_possible_nonterminate_id = np.argmax(grammar['start'])
                 context_children = self.__back_track(parse, grammar, i, j, context, start_processing_strategy, pre_terminate_processing_strategy,
                         terminate_processing_strategy, non_termination_processing_strategy, 
                 self.global_id_non_terminate(most_possible_nonterminate_id), keep_cnt)
-                start_processing_strategy(context, cell, context_children)
-                return context_merging_strategy(context, context_children)
+                gid = self.to_global_grammar_id(associate_symbol_id, most_possible_nonterminate_id, None)
+                start_processing_strategy(context, cell, context_children, gid)
+                return context_merging_strategy(context, context_children, None, gid)
             else:
                 raise ValueError
 
@@ -125,14 +132,12 @@ def to_parse_tree(grammar, parse, embed_grammar_id = False):
         def non_termination_processing_strategy(context, cell, children1, children2, grammar_id):
             pass
         
-        def terminate_processing_strategy(context, cell, symbol_id, grammar_id):
-            grammar_id = {} if embed_grammar_id else {'gid': grammar_id}
+        def terminate_processing_strategy(context, cell, symbol_id):
             context['tree'] = {
                 'root': symbol_id,
                 'suc': []
-            } | grammar_id
-            
-        
+            }
+
         def result_retrieving_strategy(context):
             return context['tree']
         
@@ -159,7 +164,8 @@ def to_grammar_derivation_sequence(parse_tree):
     def dfs(tree):
         if not tree:
             return
-        result_grammar_derivation_sequence.append(tree['g_id'])
+        if 'g_id' in tree:
+            result_grammar_derivation_sequence.append(tree['g_id'])
         for suc in tree['suc']:
             dfs(suc)
     dfs(parse_tree)
