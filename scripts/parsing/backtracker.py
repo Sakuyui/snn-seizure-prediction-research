@@ -1,4 +1,4 @@
-from .context import CKYBacktrackingContext
+from context import CKYBacktrackingContext
 from typing import Callable
 import numpy as np
 import sys

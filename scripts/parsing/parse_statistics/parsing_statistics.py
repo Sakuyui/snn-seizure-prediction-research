@@ -15,7 +15,7 @@ A grammar is in the form of
 }
 '''
 
-from ..context import CKYBacktrackingContext
+from context import CKYBacktrackingContext
 
 class ParseTreeStatistics():
     def __init__(self):
@@ -25,7 +25,7 @@ class ParseTreeStatistics():
             if key not in dictionary:
                 dictionary[key] = 0
             dictionary[key] += 1
-            
+
     #! --------------------- single tree statistic characteristic ------------------ 
     @classmethod
     def single_tree_graph_entropy(self, parse_tree):
@@ -119,10 +119,8 @@ class ParseTreeStatistics():
             for L_suc_root_symbol_id in L_succeed_node_root_symbol_id_list:
                 self.count_increase(counter_y, L_suc_root_symbol_id)
                 self.count_increase(counter_xy, f"{tree['root']}#{L_suc_root_symbol_id}")
-
             for suc in tree['suc']:
                 dfs(suc)
-            
         
         dfs(parse_tree)
         
